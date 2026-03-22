@@ -12,6 +12,7 @@
 skill.short-video-shot-split
 skill.short-video-fact-image-search
 skill.short-video-prompt-generate
+skill.short-video-image-generate
 skill.short-video-embed-assets
 ```
 
@@ -272,7 +273,131 @@ skill.short-video-embed-assets
 
 ---
 
-## 4. skill.short-video-embed-assets
+## 4. skill.short-video-image-generate
+
+### 作用
+
+- 调用具体的图像生成能力，把 `generate` 类型镜头的 prompt 变成本地图片文件
+
+### 适用场景
+
+- 已经有可执行 prompt
+- 需要真正生成概念图，而不是只保留 prompt 文本
+
+### 输入
+
+```json
+{
+  "asset_dir": "03-口播稿/Assets/wechat-clawbot/",
+  "generation_prompts": [
+    {
+      "shot_id": 12,
+      "prompt": "左右分屏对比图...",
+      "aspect_ratio": "16:9",
+      "recommended_type": "comparison",
+      "output_name": "boss-vs-enterprise.png"
+    }
+  ],
+  "provider": "dashscope|openai|google|replicate",
+  "model": "optional"
+}
+```
+
+### 输出
+
+```json
+{
+  "generated_assets": [
+    {
+      "shot_id": 12,
+      "local_paths": [
+        "03-口播稿/Assets/wechat-clawbot/boss-vs-enterprise.png"
+      ],
+      "provider": "dashscope",
+      "model": "z-image-turbo",
+      "status": "generated|failed"
+    }
+  ]
+}
+```
+
+### 执行步骤
+
+1. 读取 `generation_prompts`
+2. 确定 provider：
+   - 优先显式传入
+   - 否则按环境变量可用性选择
+3. 确定 model：
+   - CLI 参数优先
+   - 其次环境变量
+   - 最后默认模型
+4. 将 prompt 保存为 prompt file
+5. 调用生成脚本执行
+6. 输出图片到 `asset_dir`
+
+### 执行规则
+
+- 生成前必须明确显示：`Using [provider] / [model]`
+- prompt 不允许只存在内存里，必须先落成文件
+- 输出文件必须用可读文件名
+- 默认使用 `16:9`
+
+### 建议调用方式
+
+参考 `baoyu-image-gen` 的模式，统一按这种执行：
+
+```bash
+bun .agents/skills/baoyu-image-gen/scripts/main.ts --promptfiles <prompt-file> --image <output-image> --provider <provider> --ar <aspect>
+```
+
+### 已验证的 DashScope 执行方式
+
+- 接口：`/api/v1/services/aigc/text2image/image-synthesis`
+- 模型：`qwen-image-plus`
+- 模式：异步任务
+- 流程：
+  1. 提交生成任务
+  2. 获取 `task_id`
+  3. 轮询 `/api/v1/tasks/{task_id}`
+  4. 状态 `SUCCEEDED` 后下载 `results[0].url`
+
+### 已验证说明
+
+- 该流程已在当前项目的概念镜头生成中实际跑通
+- 已成功生成并落盘 5 张图片
+
+### 环境要求
+
+- `OPENAI_API_KEY`
+- `GOOGLE_API_KEY`
+- `DASHSCOPE_API_KEY`
+- `REPLICATE_API_TOKEN`
+
+优先级：
+
+- CLI 参数
+- 环境变量
+- `.agents/skills/.env`
+
+### 失败条件
+
+- 对应 provider 的 key 不存在
+- prompt file 未落盘
+- 生成失败且重试后仍失败
+
+### 落库动作
+
+- 图片输出到 `asset_dir`
+- prompt file 同时保存到 `asset_dir/prompts/`
+
+### 完成标准
+
+- 每个 `generate` 镜头都返回 `generated` 或 `failed` 结果
+- 成功图片已在本地目录落盘
+
+---
+
+## 5. skill.short-video-embed-assets
 
 ### 作用
 
@@ -362,6 +487,7 @@ skill.short-video-shot-split
 skill.short-video-shot-split
 -> skill.short-video-fact-image-search
 -> skill.short-video-prompt-generate
+-> skill.short-video-image-generate
 -> skill.short-video-embed-assets
 ```
 
@@ -373,8 +499,9 @@ skill.short-video-shot-split
 2. `skill.short-video-fact-image-search`
 3. `skill.short-video-embed-assets`
 4. `skill.short-video-prompt-generate`
+5. `skill.short-video-image-generate`
 
 原因：
 
 - 先把事实图配图链跑通，内容马上就能用
-- 生图是增强项，不是第一优先级
+- 生图是闭环增强项，但依赖 provider key

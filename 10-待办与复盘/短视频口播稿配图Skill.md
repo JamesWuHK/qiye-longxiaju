@@ -29,6 +29,16 @@
 
 `skill.short-video-illustrator`
 
+## 子 Skill 编排
+
+```text
+skill.short-video-shot-split
+skill.short-video-fact-image-search
+skill.short-video-prompt-generate
+skill.short-video-image-generate
+skill.short-video-embed-assets
+```
+
 ## 总流程图
 
 ```text
@@ -346,11 +356,28 @@ Step 1 -> Step 2 -> Step 3 -> Step 4 -> Step 5 -> Step 6 -> Step 7
 - 已嵌入的本地事实图
 - 待生成镜头的 prompt
 
+## 已验证路径
+
+- 事实图链路：已验证可行
+  - 搜图 -> 下载本地 -> `![[...]]` 嵌入 Obsidian 文档
+- DashScope 生图链路：已验证可行
+  - 使用 `qwen-image-plus`
+  - 先发起异步任务
+  - 轮询任务状态
+  - 成功后下载图片到本地素材目录
+  - 再插回口播稿镜头位置
+
+### 已验证结论
+
+- 这套 skill 不只是设计文档，已经在 `微信接入龙虾` 这篇稿子上跑通过一次完整流程
+- 当前事实图和概念图混合配图工作流已经可复用
+
 ## 当前可继续拆分的子 skill
 
 - `skill.short-video-shot-split`
 - `skill.short-video-fact-image-search`
 - `skill.short-video-prompt-generate`
+- `skill.short-video-image-generate`
 - `skill.short-video-embed-assets`
 
 其中最值得先实现的是：
