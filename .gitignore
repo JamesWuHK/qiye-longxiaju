@@ -1,2 +1,5 @@
 AGENTS.md
 .DS_Store
+Automation/.env.private
+Automation/logs/
+.agents/skills/.env
